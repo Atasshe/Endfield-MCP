@@ -7,7 +7,7 @@
  * like `{"key": "-7078064683023630592", "value": "管理员"}`.
  *
  * This module owns that lookup. It lazily loads one or more language
- * tables (default CN), builds an in-memory `Map<string, string>` index,
+ * tables (default CN), caches an in-memory string lookup index,
  * and exposes `resolveText()` for readers to call without knowing which
  * language is active.
  *
@@ -52,7 +52,7 @@ let _store: JsonStore | null = null;
 let _defaultLang: LanguageCode = DEFAULT_LANGUAGE as LanguageCode;
 
 /** Per-language index: hash string → localized string. */
-const _indices = new Map<LanguageCode, Map<string, string>>();
+const _indices = new Map<LanguageCode, Record<string, string>>();
 
 export function bindTextStore(store: JsonStore): void {
   _store = store;
@@ -106,27 +106,21 @@ function store(): JsonStore {
  * represent int64 exactly — see notes on CharacterTable id handling).
  * Values are the localized strings.
  *
- * We build an in-memory `Map<string, string>` eagerly on first access.
- * With ~50k entries per language this takes a few hundred ms — acceptable
- * because it happens once per language per process lifetime.
+ * Keep the parsed JSON object directly instead of cloning every entry into
+ * a second Map. The game localization bundles are large enough that keeping
+ * both representations can exceed the 512 MiB limit of small Render services.
  */
-export function loadLanguageIndex(lang: LanguageCode): Map<string, string> {
+export function loadLanguageIndex(lang: LanguageCode): Record<string, string> {
   const cached = _indices.get(lang);
   if (cached !== undefined) return cached;
 
   // Mirror layout shortens I18nTextTable_CN.json → i18n/CN.json.
-  // readJsonInt64Safe is defense-in-depth: the current mirror ships i18n
-  // keys as JSON strings, but if upstream ever ships them as bare numeric
-  // literals (as it does for {id,text} ids in other tables), plain
-  // readJson would truncate the keys and silently break every lookup.
+  // All keys in the mirrored i18n JSON are quoted strings, so plain
+  // JSON.parse is already int64-safe for them. Avoid readJsonInt64Safe here:
+  // its string-aware preprocessing duplicates the entire large JSON text.
+  // Table files containing *bare* int64 literals still use the safe parser.
   const path = `i18n/${lang}.json`;
-  const raw = store().readJsonInt64Safe<Record<string, string>>(path);
-  const index = new Map<string, string>();
-  for (const [k, v] of Object.entries(raw)) {
-    if (typeof v === "string") {
-      index.set(k, v);
-    }
-  }
+  const index = store().readJson<Record<string, string>>(path);
   _indices.set(lang, index);
   return index;
 }
@@ -162,7 +156,7 @@ export function resolveText(
   const effectiveLang = lang ?? _defaultLang;
   try {
     const index = loadLanguageIndex(effectiveLang);
-    const hit = index.get(String(loc.id));
+    const hit = index[String(loc.id)];
     if (hit !== undefined) return hit;
   } catch {
     // Index load failed (missing file, corrupt JSON) — fall through.
@@ -183,7 +177,7 @@ export function tryResolveText(
   if (loc.text && loc.text.length > 0) return loc.text;
   try {
     const index = loadLanguageIndex(lang);
-    return index.get(String(loc.id)) ?? null;
+    return index[String(loc.id)] ?? null;
   } catch {
     return null;
   }
