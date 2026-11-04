@@ -23,6 +23,7 @@ import { loadConfig } from "./config.js";
 import { createLogger } from "./utils/log.js";
 import { bindWikiConfig } from "./api/endfieldWiki.js";
 import { registerWikiTools } from "./tools/wikiTools.js";
+import { registerWarfarinTools } from "./tools/warfarinTools.js";
 import { registerGamedataTools } from "./tools/gamedataTools.js";
 import { registerStoryTools } from "./tools/storyTools.js";
 import { registerWorldviewTools } from "./tools/worldviewTools.js";
@@ -66,6 +67,7 @@ function createMcpServer(): McpServer {
     version: SERVER_VERSION,
   });
   registerWikiTools(server);
+  registerWarfarinTools(server);
   registerGamedataTools(server);
   registerStoryTools(server);
   registerWorldviewTools(server);

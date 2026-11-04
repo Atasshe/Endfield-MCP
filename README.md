@@ -1,5 +1,10 @@
 # Endfield MCP Server
 
+> **Atasshe fork:** adds `ef_search_warfarin` and `ef_read_warfarin` to consult
+> [Warfarin Wiki](https://warfarin.wiki/br) in Portuguese or English alongside
+> the existing Talos Wiki and bundled game datasets. These tools fetch only
+> requested pages and return a source link; they do not maintain a website mirror.
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Runtime: Bun](https://img.shields.io/badge/runtime-Bun-000000)](https://bun.sh)
 
@@ -22,6 +27,8 @@ This is the sibling project of [PRTS-MCP](https://github.com/3aKHP/prts-mcp) (fo
 | Tool | Description |
 |------|-------------|
 | `ef_search_wiki(query, limit?)` | Search Endfield Talos Wiki by keyword |
+| `ef_search_warfarin(category, query, locale?, limit?)` | Find Warfarin Wiki articles by category and name |
+| `ef_read_warfarin(path, section?, max_chars?)` | Read a Warfarin article or a named section, with source URL |
 | `ef_read_wiki_page(page_title, section_index?)` | Fetch plain-text content of a wiki page |
 | `ef_list_wiki_sections(page_title)` | Section table of contents for a page |
 | `ef_get_wiki_categories(page_title)` | Category tags for a page |
